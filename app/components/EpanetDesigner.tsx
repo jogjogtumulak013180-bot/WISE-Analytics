@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface Reservoir {
   id: string;
@@ -31,6 +31,8 @@ interface PipeResult extends Pipe {
 }
 
 export default function EpanetDesigner() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [reservoirs, setReservoirs] = useState<Reservoir[]>([{ id: "R1", head: 100 }]);
   const [junctions, setJunctions] = useState<Junction[]>([
     { id: "J1", elevation: 80, demand: 10 },
@@ -41,10 +43,111 @@ export default function EpanetDesigner() {
     { id: "P2", from: "J1", to: "J2", length: 400, diameter: 100, roughness: 120 },
   ]);
 
+  const [importing, setImporting] = useState(false);
+  const [importedFileName, setImportedFileName] = useState<string | null>(null);
+  const [importWarning, setImportWarning] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [junctionResults, setJunctionResults] = useState<JunctionResult[] | null>(null);
   const [pipeResults, setPipeResults] = useState<PipeResult[] | null>(null);
+
+  function round(n: number) {
+    return Math.round(n * 100) / 100;
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setImporting(true);
+    setErrorMsg(null);
+    setImportWarning(null);
+    setJunctionResults(null);
+    setPipeResults(null);
+
+    try {
+      const text = await file.text();
+      const {
+        Workspace,
+        Project,
+        NodeType,
+        LinkType,
+        NodeProperty,
+        LinkProperty,
+        CountType,
+      } = await import("epanet-js");
+
+      const ws = new Workspace();
+      await ws.loadModule();
+      ws.writeFile("imported.inp", text);
+
+      const model = new Project(ws);
+      model.open("imported.inp", "report.rpt", "out.bin");
+
+      const nodeCount = model.getCount(CountType.NodeCount);
+      const linkCount = model.getCount(CountType.LinkCount);
+
+      const newReservoirs: Reservoir[] = [];
+      const newJunctions: Junction[] = [];
+      const skipped: string[] = [];
+
+      for (let i = 1; i <= nodeCount; i++) {
+        const id = model.getNodeId(i);
+        const type = model.getNodeType(i);
+        if (type === NodeType.Reservoir) {
+          newReservoirs.push({ id, head: round(model.getNodeValue(i, NodeProperty.Elevation)) });
+        } else if (type === NodeType.Junction) {
+          newJunctions.push({
+            id,
+            elevation: round(model.getNodeValue(i, NodeProperty.Elevation)),
+            demand: round(model.getNodeValue(i, NodeProperty.BaseDemand)),
+          });
+        } else {
+          skipped.push(`Tank "${id}" (approximate with a Reservoir/Junction if needed)`);
+        }
+      }
+
+      const newPipes: Pipe[] = [];
+      for (let i = 1; i <= linkCount; i++) {
+        const id = model.getLinkId(i);
+        const type = model.getLinkType(i);
+        if (type === LinkType.Pipe || type === LinkType.CVPipe) {
+          const { node1, node2 } = model.getLinkNodes(i);
+          newPipes.push({
+            id,
+            from: model.getNodeId(node1),
+            to: model.getNodeId(node2),
+            length: round(model.getLinkValue(i, LinkProperty.Length)),
+            diameter: round(model.getLinkValue(i, LinkProperty.Diameter)),
+            roughness: round(model.getLinkValue(i, LinkProperty.Roughness)),
+          });
+        } else {
+          skipped.push(`Link "${id}" (pumps/valves aren't supported yet — only plain pipes)`);
+        }
+      }
+
+      model.close();
+
+      if (newReservoirs.length === 0) {
+        throw new Error(
+          "No reservoirs found in this file — every network needs at least one fixed-head source."
+        );
+      }
+
+      setReservoirs(newReservoirs);
+      setJunctions(newJunctions);
+      setPipes(newPipes);
+      setImportedFileName(file.name);
+      if (skipped.length > 0) {
+        setImportWarning(`Imported, but skipped: ${skipped.join("; ")}.`);
+      }
+    } catch (err: any) {
+      setErrorMsg(`Couldn't import that file: ${err?.message || String(err)}`);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function runSimulation() {
     setRunning(true);
@@ -112,10 +215,6 @@ export default function EpanetDesigner() {
     }
   }
 
-  function round(n: number) {
-    return Math.round(n * 100) / 100;
-  }
-
   function updateReservoir(i: number, patch: Partial<Reservoir>) {
     setReservoirs((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
@@ -134,6 +233,38 @@ export default function EpanetDesigner() {
         meters, liters/second, Hazen-Williams roughness.
       </div>
 
+      <div style={styles.importBox}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
+            Designed this network in EPANET already?
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+            Export it as an <code>.inp</code> file from EPANET Desktop and upload it here —
+            it'll fill in the tables below and you can run the same solver on it.
+          </div>
+        </div>
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".inp"
+            style={{ display: "none" }}
+            onChange={handleFileSelected}
+          />
+          <button
+            style={styles.importBtn}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? "Importing…" : "Import .inp file"}
+          </button>
+        </div>
+      </div>
+
+      {importedFileName && !importWarning && !errorMsg && (
+        <div style={styles.successBanner}>Imported "{importedFileName}" successfully.</div>
+      )}
+      {importWarning && <div style={styles.warningBanner}>{importWarning}</div>}
       {errorMsg && <div style={styles.errorBanner}>{errorMsg}</div>}
 
       <Section title="Reservoirs">
@@ -258,6 +389,46 @@ const styles: Record<string, any> = {
     border: "1px solid var(--border)",
     borderRadius: 8,
     padding: "10px 14px",
+    marginBottom: 12,
+  },
+  importBox: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+    background: "var(--navy-900)",
+    border: "1px dashed var(--teal-400)",
+    borderRadius: 10,
+    padding: "14px 16px",
+    marginBottom: 16,
+  },
+  importBtn: {
+    background: "linear-gradient(135deg, var(--teal-500), var(--cyan-400))",
+    color: "var(--navy-950)",
+    border: "none",
+    borderRadius: 8,
+    padding: "10px 16px",
+    fontWeight: 700,
+    fontSize: 12,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  successBanner: {
+    background: "rgba(52,211,153,0.1)",
+    border: "1px solid var(--success)",
+    color: "var(--success)",
+    borderRadius: 8,
+    padding: "10px 14px",
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  warningBanner: {
+    background: "rgba(251,191,36,0.1)",
+    border: "1px solid var(--warning)",
+    color: "var(--warning)",
+    borderRadius: 8,
+    padding: "10px 14px",
+    fontSize: 13,
     marginBottom: 16,
   },
   errorBanner: {
