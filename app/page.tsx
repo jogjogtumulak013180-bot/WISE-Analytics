@@ -186,11 +186,8 @@ export default function Home() {
     <div style={styles.shell}>
       <aside style={styles.sidebar}>
         <div style={styles.brand}>
-          <img src="/logo.png" alt="WISE Analytics" style={styles.brandMark} />
-          <div>
-            <div style={styles.brandName}>WISE Analytics</div>
-            <div style={styles.brandSub}>Project Tracker</div>
-          </div>
+          <img src="/logo.png" alt="WISE Analytics — Intelligence for Better Decisions" style={styles.brandMark} />
+          <div style={styles.brandSub}>Project Tracker</div>
         </div>
 
         <nav style={styles.nav}>
@@ -579,21 +576,21 @@ const styles: Record<string, React.CSSProperties> = {
   },
   brand: {
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    gap: 10,
-    padding: "0 8px 20px",
+    gap: 8,
+    padding: "12px 8px 20px",
     marginBottom: 12,
     borderBottom: "1px solid var(--border)",
   },
   brandMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    objectFit: "cover",
+    width: 148,
+    height: "auto",
+    objectFit: "contain",
     flexShrink: 0,
   },
   brandName: { fontWeight: 700, fontSize: 14 },
-  brandSub: { fontSize: 11, color: "var(--text-muted)" },
+  brandSub: { fontSize: 11, color: "var(--text-muted)", letterSpacing: 0.4 },
   nav: { display: "flex", flexDirection: "column", gap: 2 },
   navItem: {
     display: "flex",
