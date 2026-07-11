@@ -203,6 +203,11 @@ export default function Home() {
       <main style={styles.main}>
         <header style={styles.header}>
           <div>
+            <div style={styles.eyebrow}>
+              {view === "Overview"
+                ? "ALL PROJECTS · CROSS SERVICE LINE"
+                : `${CATEGORY_META[view as ProjectCategory]?.short.toUpperCase() ?? ""} · SERVICE LINE`}
+            </div>
             <h1 style={styles.h1}>
               {view === "Overview" ? "All Projects" : view}
             </h1>
@@ -513,18 +518,27 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
 const styles: Record<string, React.CSSProperties> = {
   shell: {
     display: "flex",
+    flexDirection: "column",
     minHeight: "100vh",
   },
-  main: { flex: 1, padding: "28px 36px", maxWidth: 1200 },
+  main: { padding: "48px 40px 60px", maxWidth: 1200, width: "100%", margin: "0 auto" },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 24,
+    marginBottom: 32,
+    gap: 20,
   },
-  h1: { fontSize: 24, fontWeight: 700, margin: 0 },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: 2,
+    color: "var(--text-muted)",
+    marginBottom: 12,
+  },
+  h1: { fontSize: 48, fontWeight: 800, margin: 0, letterSpacing: -1 },
   h2: { fontSize: 18, fontWeight: 700, margin: "0 0 16px" },
-  headerSub: { fontSize: 13, color: "var(--text-secondary)", marginTop: 4 },
+  headerSub: { fontSize: 14, color: "var(--text-secondary)", marginTop: 10 },
   primaryBtn: {
     background: "linear-gradient(135deg, var(--teal-500), var(--cyan-400))",
     color: "var(--navy-950)",

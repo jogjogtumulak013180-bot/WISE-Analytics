@@ -50,15 +50,17 @@ export default function CapabilityDashboard({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  shell: { display: "flex", minHeight: "100vh" },
-  main: { flex: 1, padding: "28px 36px", maxWidth: 1200 },
+  shell: { display: "flex", flexDirection: "column", minHeight: "100vh" },
+  main: { padding: "48px 40px 60px", maxWidth: 1200, width: "100%", margin: "0 auto" },
   breadcrumb: {
     fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: 1,
     color: "var(--text-muted)",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   crumbLink: { color: "var(--teal-400)", textDecoration: "none" },
-  h1: { fontSize: 24, fontWeight: 700, margin: "0 0 20px" },
+  h1: { fontSize: 36, fontWeight: 800, letterSpacing: -0.5, margin: "0 0 24px" },
   placeholder: {
     textAlign: "center",
     padding: "60px 20px",

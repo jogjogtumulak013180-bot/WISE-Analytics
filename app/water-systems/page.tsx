@@ -21,6 +21,7 @@ export default function WaterSystemsHub() {
       <main style={styles.main}>
         <header style={styles.header}>
           <div>
+            <div style={styles.eyebrow}>MUNICIPAL WATER SYSTEMS · INTERNAL TOOL</div>
             <h1 style={styles.h1}>Municipal Water Systems</h1>
             <div style={styles.headerSub}>
               {TOTAL_CAPABILITY_COUNT} capability areas across the full water utility
@@ -72,17 +73,24 @@ export default function WaterSystemsHub() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  shell: { display: "flex", minHeight: "100vh" },
-  main: { flex: 1, padding: "28px 36px", maxWidth: 1200 },
+  shell: { display: "flex", flexDirection: "column", minHeight: "100vh" },
+  main: { padding: "48px 40px 60px", maxWidth: 1200, width: "100%", margin: "0 auto" },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 28,
+    marginBottom: 32,
     gap: 20,
   },
-  h1: { fontSize: 24, fontWeight: 700, margin: 0 },
-  headerSub: { fontSize: 13, color: "var(--text-secondary)", marginTop: 6, maxWidth: 560 },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: 2,
+    color: "var(--text-muted)",
+    marginBottom: 12,
+  },
+  h1: { fontSize: 48, fontWeight: 800, margin: 0, letterSpacing: -1 },
+  headerSub: { fontSize: 14, color: "var(--text-secondary)", marginTop: 10, maxWidth: 560 },
   dropdown: {
     background: "linear-gradient(135deg, var(--teal-500), var(--cyan-400))",
     color: "var(--navy-950)",
