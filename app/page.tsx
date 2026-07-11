@@ -186,7 +186,7 @@ export default function Home() {
     <div style={styles.shell}>
       <aside style={styles.sidebar}>
         <div style={styles.brand}>
-          <div style={styles.brandMark}>WA</div>
+          <img src="/logo.png" alt="WISE Analytics" style={styles.brandMark} />
           <div>
             <div style={styles.brandName}>WISE Analytics</div>
             <div style={styles.brandSub}>Project Tracker</div>
@@ -196,7 +196,6 @@ export default function Home() {
         <nav style={styles.nav}>
           <NavItem
             label="Overview"
-            icon="\u{1F4CA}"
             count={overallStats.total}
             active={view === "Overview"}
             onClick={() => setView("Overview")}
@@ -436,7 +435,7 @@ function NavItem({
   accent,
 }: {
   label: string;
-  icon: string;
+  icon?: string;
   count: number;
   active: boolean;
   onClick: () => void;
@@ -452,7 +451,7 @@ function NavItem({
         color: active ? "var(--text-primary)" : "var(--text-secondary)",
       }}
     >
-      <span style={{ fontSize: 16 }}>{icon}</span>
+      {icon && <span style={{ fontSize: 16 }}>{icon}</span>}
       <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
       <span style={styles.navCount}>{count}</span>
     </button>
@@ -590,13 +589,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 36,
     height: 36,
     borderRadius: 8,
-    background: "linear-gradient(135deg, var(--teal-400), var(--cyan-400))",
-    color: "var(--navy-950)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 800,
-    fontSize: 13,
+    objectFit: "cover",
+    flexShrink: 0,
   },
   brandName: { fontWeight: 700, fontSize: 14 },
   brandSub: { fontSize: 11, color: "var(--text-muted)" },
