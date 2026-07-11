@@ -10,7 +10,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 export type ProjectCategory =
   | "Construction Management"
-  | "Water System Design and Operation"
   | "Local Development Planning"
   | "Municipal Intelligence";
 
@@ -34,7 +33,6 @@ export interface WaProject {
 
 export const CATEGORIES: ProjectCategory[] = [
   "Construction Management",
-  "Water System Design and Operation",
   "Local Development Planning",
   "Municipal Intelligence",
 ];
@@ -45,3 +43,16 @@ export const STATUSES: ProjectStatus[] = [
   "On Hold",
   "Completed",
 ];
+
+// --- GIS feature types (Interactive GIS Designer) ---
+export type GisNodeType = "Junction" | "Reservoir" | "Tank" | "Pump";
+
+export interface GisFeature {
+  id: string;
+  feature_type: "node" | "pipe";
+  node_type: GisNodeType | null;
+  label: string;
+  geometry: any;
+  properties: Record<string, any>;
+  created_at: string;
+}

@@ -9,6 +9,7 @@ import {
   type ProjectCategory,
   type ProjectStatus,
 } from "./lib/supabase";
+import Sidebar from "./components/Sidebar";
 
 type View = "Overview" | ProjectCategory;
 
@@ -17,7 +18,6 @@ const CATEGORY_META: Record<
   { short: string; icon: string; accent: string }
 > = {
   "Construction Management": { short: "Construction", icon: "\u{1F3D7}️", accent: "#f59e0b" },
-  "Water System Design and Operation": { short: "Water Systems", icon: "\u{1F4A7}", accent: "#22d3ee" },
   "Local Development Planning": { short: "Dev Planning", icon: "\u{1F5FA}️", accent: "#34d399" },
   "Municipal Intelligence": { short: "Municipal Intel", icon: "\u{1F3DB}️", accent: "#a78bfa" },
 };
@@ -182,40 +182,23 @@ export default function Home() {
     return { total, ongoing, completed, avgProgress };
   }
 
+  const categoryCounts = useMemo(() => {
+    const counts: Partial<Record<ProjectCategory, number>> = {};
+    CATEGORIES.forEach((c) => {
+      counts[c] = projects.filter((p) => p.category === c).length;
+    });
+    return counts;
+  }, [projects]);
+
   return (
     <div style={styles.shell}>
-      <aside style={styles.sidebar}>
-        <div style={styles.brand}>
-          <img src="/logo.png" alt="WISE Analytics — Intelligence for Better Decisions" style={styles.brandMark} />
-          <div style={styles.brandSub}>Project Tracker</div>
-        </div>
-
-        <nav style={styles.nav}>
-          <NavItem
-            label="Overview"
-            count={overallStats.total}
-            active={view === "Overview"}
-            onClick={() => setView("Overview")}
-          />
-          {CATEGORIES.map((cat) => (
-            <NavItem
-              key={cat}
-              label={CATEGORY_META[cat].short}
-              icon={CATEGORY_META[cat].icon}
-              count={categoryStats(cat).total}
-              active={view === cat}
-              onClick={() => setView(cat)}
-              accent={CATEGORY_META[cat].accent}
-            />
-          ))}
-        </nav>
-
-        <div style={styles.sidebarFooter}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Internal tool &middot; not connected to wiseanalyticsph.com
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        variant="root"
+        activeView={view}
+        onSelectView={setView}
+        overviewCount={overallStats.total}
+        categoryCounts={categoryCounts}
+      />
 
       <main style={styles.main}>
         <header style={styles.header}>
@@ -300,7 +283,7 @@ export default function Home() {
                   style={styles.input}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Barangay San Isidro Water Line Rehab"
+                  placeholder="e.g. Barangay San Isidro Road Widening"
                   required
                 />
               </FormRow>
@@ -423,38 +406,6 @@ export default function Home() {
   );
 }
 
-function NavItem({
-  label,
-  icon,
-  count,
-  active,
-  onClick,
-  accent,
-}: {
-  label: string;
-  icon?: string;
-  count: number;
-  active: boolean;
-  onClick: () => void;
-  accent?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        ...styles.navItem,
-        background: active ? "var(--navy-800)" : "transparent",
-        borderLeft: active ? `3px solid ${accent ?? "var(--teal-400)"}` : "3px solid transparent",
-        color: active ? "var(--text-primary)" : "var(--text-secondary)",
-      }}
-    >
-      {icon && <span style={{ fontSize: 16 }}>{icon}</span>}
-      <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
-      <span style={styles.navCount}>{count}</span>
-    </button>
-  );
-}
-
 function StatCard({
   label,
   value,
@@ -564,53 +515,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     minHeight: "100vh",
   },
-  sidebar: {
-    width: 240,
-    borderRight: "1px solid var(--border)",
-    display: "flex",
-    flexDirection: "column",
-    padding: "20px 14px",
-    position: "sticky",
-    top: 0,
-    height: "100vh",
-  },
-  brand: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 8,
-    padding: "12px 8px 20px",
-    marginBottom: 12,
-    borderBottom: "1px solid var(--border)",
-  },
-  brandMark: {
-    width: 148,
-    height: "auto",
-    objectFit: "contain",
-    flexShrink: 0,
-  },
-  brandName: { fontWeight: 700, fontSize: 14 },
-  brandSub: { fontSize: 11, color: "var(--text-muted)", letterSpacing: 0.4 },
-  nav: { display: "flex", flexDirection: "column", gap: 2 },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "10px 12px",
-    borderRadius: 6,
-    border: "none",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-  },
-  navCount: {
-    fontSize: 11,
-    color: "var(--text-muted)",
-    background: "var(--navy-800)",
-    borderRadius: 10,
-    padding: "1px 8px",
-  },
-  sidebarFooter: { marginTop: "auto", padding: "12px 8px" },
   main: { flex: 1, padding: "28px 36px", maxWidth: 1200 },
   header: {
     display: "flex",
