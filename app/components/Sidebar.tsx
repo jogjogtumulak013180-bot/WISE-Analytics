@@ -1,32 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { CATEGORIES, type ProjectCategory } from "../lib/supabase";
+import { usePathname } from "next/navigation";
+import type { ProjectCategory } from "../lib/supabase";
 import { TOTAL_CAPABILITY_COUNT } from "../lib/waterSystems";
+import { CONSTRUCTION_MANAGEMENT_TOTAL_COUNT } from "../lib/constructionManagement";
+import { DEV_PLANNING_TOTAL_COUNT } from "../lib/devPlanning";
+import { MUNICIPAL_INTEL_TOTAL_COUNT } from "../lib/municipalIntel";
 
 type View = "Overview" | ProjectCategory;
 
-const CATEGORY_META: Record<ProjectCategory, { short: string; icon: string; accent: string }> = {
-  "Construction Management": { short: "Construction", icon: "\u{1F3D7}️", accent: "#f59e0b" },
-  "Local Development Planning": { short: "Dev Planning", icon: "\u{1F5FA}️", accent: "#34d399" },
-  "Municipal Intelligence": { short: "Municipal Intel", icon: "\u{1F3DB}️", accent: "#a78bfa" },
-};
+const PRODUCT_LINKS = [
+  { href: "/construction", label: "Construction", icon: "\u{1F3D7}️", accent: "#f59e0b", count: CONSTRUCTION_MANAGEMENT_TOTAL_COUNT },
+  { href: "/dev-planning", label: "Dev Planning", icon: "\u{1F5FA}️", accent: "#34d399", count: DEV_PLANNING_TOTAL_COUNT },
+  { href: "/municipal-intel", label: "Municipal Intel", icon: "\u{1F3DB}️", accent: "#a78bfa", count: MUNICIPAL_INTEL_TOTAL_COUNT },
+  { href: "/water-systems", label: "Municipal Water Systems", icon: "\u{1F4A7}", accent: "#22d3ee", count: TOTAL_CAPABILITY_COUNT },
+];
 
 interface SidebarProps {
-  variant: "root" | "water-systems";
+  variant: "root" | "secondary";
   activeView?: View;
   onSelectView?: (view: View) => void;
   overviewCount?: number;
-  categoryCounts?: Partial<Record<ProjectCategory, number>>;
 }
 
-export default function Sidebar({
-  variant,
-  activeView,
-  onSelectView,
-  overviewCount,
-  categoryCounts,
-}: SidebarProps) {
+export default function Sidebar({ variant, activeView, onSelectView, overviewCount }: SidebarProps) {
+  const pathname = usePathname();
+
   return (
     <header style={styles.navbar}>
       <div style={styles.row}>
@@ -49,43 +49,21 @@ export default function Sidebar({
             </button>
           ) : (
             <Link href="/" style={{ textDecoration: "none" }}>
-              <div style={pillStyle(false, "var(--teal-400)")}>
+              <div style={pillStyle(pathname === "/", "var(--teal-400)")}>
                 <span>Overview</span>
               </div>
             </Link>
           )}
 
-          {CATEGORIES.map((cat) => {
-            const meta = CATEGORY_META[cat];
-            const active = variant === "root" && activeView === cat;
-            const content = (
-              <>
-                <span style={{ fontSize: 14 }}>{meta.icon}</span>
-                <span>{meta.short}</span>
-                {variant === "root" && <span style={styles.pillCount}>{categoryCounts?.[cat] ?? 0}</span>}
-              </>
-            );
-            if (variant === "root") {
-              return (
-                <button key={cat} onClick={() => onSelectView?.(cat)} style={pillStyle(active, meta.accent)}>
-                  {content}
-                </button>
-              );
-            }
-            return (
-              <Link key={cat} href="/" style={{ textDecoration: "none" }}>
-                <div style={pillStyle(false, meta.accent)}>{content}</div>
-              </Link>
-            );
-          })}
-
-          <Link href="/water-systems" style={{ textDecoration: "none" }}>
-            <div style={pillStyle(variant === "water-systems", "#22d3ee")}>
-              <span style={{ fontSize: 14 }}>{"\u{1F4A7}"}</span>
-              <span>Municipal Water Systems</span>
-              <span style={styles.pillCount}>{TOTAL_CAPABILITY_COUNT}</span>
-            </div>
-          </Link>
+          {PRODUCT_LINKS.map((p) => (
+            <Link key={p.href} href={p.href} style={{ textDecoration: "none" }}>
+              <div style={pillStyle(pathname?.startsWith(p.href) ?? false, p.accent)}>
+                <span style={{ fontSize: 14 }}>{p.icon}</span>
+                <span>{p.label}</span>
+                <span style={styles.pillCount}>{p.count}</span>
+              </div>
+            </Link>
+          ))}
         </nav>
       </div>
     </header>

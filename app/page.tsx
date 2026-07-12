@@ -11,8 +11,6 @@ import {
 } from "./lib/supabase";
 import Sidebar from "./components/Sidebar";
 
-type View = "Overview" | ProjectCategory;
-
 const CATEGORY_META: Record<
   ProjectCategory,
   { short: string; icon: string; accent: string }
@@ -46,7 +44,6 @@ export default function Home() {
   const [projects, setProjects] = useState<WaProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [view, setView] = useState<View>("Overview");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
@@ -153,11 +150,6 @@ export default function Home() {
     await fetchProjects();
   }
 
-  const visibleProjects = useMemo(() => {
-    if (view === "Overview") return projects;
-    return projects.filter((p) => p.category === view);
-  }, [projects, view]);
-
   const overallStats = useMemo(() => {
     const total = projects.length;
     const ongoing = projects.filter((p) => p.status === "Ongoing").length;
@@ -170,59 +162,20 @@ export default function Home() {
     return { total, ongoing, completed, onHold, avgProgress };
   }, [projects]);
 
-  function categoryStats(cat: ProjectCategory) {
-    const items = projects.filter((p) => p.category === cat);
-    const total = items.length;
-    const ongoing = items.filter((p) => p.status === "Ongoing").length;
-    const completed = items.filter((p) => p.status === "Completed").length;
-    const avgProgress =
-      total === 0
-        ? 0
-        : Math.round(items.reduce((s, p) => s + p.progress, 0) / total);
-    return { total, ongoing, completed, avgProgress };
-  }
-
-  const categoryCounts = useMemo(() => {
-    const counts: Partial<Record<ProjectCategory, number>> = {};
-    CATEGORIES.forEach((c) => {
-      counts[c] = projects.filter((p) => p.category === c).length;
-    });
-    return counts;
-  }, [projects]);
-
   return (
     <div style={styles.shell}>
-      <Sidebar
-        variant="root"
-        activeView={view}
-        onSelectView={setView}
-        overviewCount={overallStats.total}
-        categoryCounts={categoryCounts}
-      />
+      <Sidebar variant="root" activeView="Overview" overviewCount={overallStats.total} />
 
       <main style={styles.main}>
         <header style={styles.header}>
           <div>
-            <div style={styles.eyebrow}>
-              {view === "Overview"
-                ? "ALL PROJECTS · CROSS SERVICE LINE"
-                : `${CATEGORY_META[view as ProjectCategory]?.short.toUpperCase() ?? ""} · SERVICE LINE`}
-            </div>
-            <h1 style={styles.h1}>
-              {view === "Overview" ? "All Projects" : view}
-            </h1>
+            <div style={styles.eyebrow}>ALL PROJECTS · CROSS SERVICE LINE</div>
+            <h1 style={styles.h1}>All Projects</h1>
             <div style={styles.headerSub}>
-              {view === "Overview"
-                ? "Everything you're working on, across every service line."
-                : `Dashboard for ${view}`}
+              Everything you&rsquo;re working on, across every service line.
             </div>
           </div>
-          <button
-            style={styles.primaryBtn}
-            onClick={() =>
-              openNewForm(view === "Overview" ? undefined : (view as ProjectCategory))
-            }
-          >
+          <button style={styles.primaryBtn} onClick={() => openNewForm()}>
             + New Project
           </button>
         </header>
@@ -230,41 +183,23 @@ export default function Home() {
         {errorMsg && <div style={styles.errorBanner}>{errorMsg}</div>}
 
         <section style={styles.statsRow}>
-          {view === "Overview" ? (
-            <>
-              <StatCard label="Total Projects" value={overallStats.total} />
-              <StatCard label="Ongoing" value={overallStats.ongoing} color={STATUS_COLOR.Ongoing} />
-              <StatCard label="Completed" value={overallStats.completed} color={STATUS_COLOR.Completed} />
-              <StatCard label="On Hold" value={overallStats.onHold} color={STATUS_COLOR["On Hold"]} />
-              <StatCard label="Avg. Progress" value={`${overallStats.avgProgress}%`} />
-            </>
-          ) : (
-            (() => {
-              const s = categoryStats(view as ProjectCategory);
-              return (
-                <>
-                  <StatCard label="Total Projects" value={s.total} />
-                  <StatCard label="Ongoing" value={s.ongoing} color={STATUS_COLOR.Ongoing} />
-                  <StatCard label="Completed" value={s.completed} color={STATUS_COLOR.Completed} />
-                  <StatCard label="Avg. Progress" value={`${s.avgProgress}%`} />
-                </>
-              );
-            })()
-          )}
+          <StatCard label="Total Projects" value={overallStats.total} />
+          <StatCard label="Ongoing" value={overallStats.ongoing} color={STATUS_COLOR.Ongoing} />
+          <StatCard label="Completed" value={overallStats.completed} color={STATUS_COLOR.Completed} />
+          <StatCard label="On Hold" value={overallStats.onHold} color={STATUS_COLOR["On Hold"]} />
+          <StatCard label="Avg. Progress" value={`${overallStats.avgProgress}%`} />
         </section>
 
         {loading ? (
           <div style={styles.emptyState}>Loading projects&hellip;</div>
-        ) : visibleProjects.length === 0 ? (
+        ) : projects.length === 0 ? (
           <div style={styles.emptyState}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>
-              {view === "Overview" ? "\u{1F4CB}" : CATEGORY_META[view as ProjectCategory].icon}
-            </div>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>{"\u{1F4CB}"}</div>
             No projects yet. Click &ldquo;+ New Project&rdquo; to add one.
           </div>
         ) : (
           <section style={styles.grid}>
-            {visibleProjects.map((p) => (
+            {projects.map((p) => (
               <ProjectCard
                 key={p.id}
                 project={p}
