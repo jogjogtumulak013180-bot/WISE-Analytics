@@ -38,24 +38,16 @@ export const DEV_PLANNING_GROUPS: CapabilityGroup[] = [
     ],
   },
   {
-    slug: "profiling-baseline",
-    title: "4. Profiling & Baseline",
-    items: [
-      { slug: "ecological-profile", title: "Ecological Profile" },
-      { slug: "socioeconomic-profile", title: "Socioeconomic Profile" },
-    ],
-  },
-  {
     slug: "pre-feasibility-study",
-    title: "5. Pre-Feasibility Study",
+    title: "4. Pre-Feasibility Study",
     items: [
       { slug: "source-assessment", title: "Source Assessment" },
-      { slug: "water-balance", title: "Water Balance" },
+      { slug: "bulk-hydraulic-analysis", title: "Bulk Hydraulic Analysis" },
     ],
   },
   {
     slug: "feasibility-study",
-    title: "6. Feasibility Study",
+    title: "5. Feasibility Study",
     items: [
       { slug: "financial-model", title: "Financial Model" },
       { slug: "break-even-analysis", title: "Break-even Analysis" },

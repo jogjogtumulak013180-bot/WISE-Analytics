@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import CapabilityDashboard from "../../../components/CapabilityDashboard";
 import { findCapability } from "../../../lib/waterSystems";
 import GisDesigner from "../../../components/GisDesigner";
-import EpanetDesigner from "../../../components/EpanetDesigner";
 
 export default function WaterSystemsDashboard({
   params,
@@ -20,11 +19,7 @@ export default function WaterSystemsDashboard({
       group={group}
       item={item}
     >
-      {item.slug === "interactive-gis-designer" ? (
-        <GisDesigner />
-      ) : item.slug === "epanet-designer" ? (
-        <EpanetDesigner />
-      ) : undefined}
+      {item.slug === "interactive-gis-map" ? <GisDesigner /> : undefined}
     </CapabilityDashboard>
   );
 }
