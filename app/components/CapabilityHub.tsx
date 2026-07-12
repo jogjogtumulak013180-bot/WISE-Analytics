@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import type { CapabilityGroup } from "../lib/waterSystems";
+import { PILLARS } from "../lib/pillars";
 
 interface CapabilityHubProps {
   eyebrow: string;
@@ -34,6 +36,15 @@ export default function CapabilityHub({ eyebrow, title, subtitle, groups, basePa
             <div style={styles.headerSub}>{subtitle}</div>
           </div>
 
+          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+            <Link
+              href={`/projects/new?pillar=${
+                PILLARS.find((p) => p.basePath === basePath)?.slug ?? ""
+              }`}
+              style={styles.newButton}
+            >
+              + New Project
+            </Link>
           <select
             defaultValue=""
             onChange={handleJump}
@@ -41,7 +52,7 @@ export default function CapabilityHub({ eyebrow, title, subtitle, groups, basePa
             aria-label="Open a capability dashboard"
           >
             <option value="" disabled>
-              + New Project (open a dashboard)
+              Open a dashboard…
             </option>
             {groups.map((group) => (
               <optgroup key={group.slug} label={group.title}>
@@ -53,6 +64,7 @@ export default function CapabilityHub({ eyebrow, title, subtitle, groups, basePa
               </optgroup>
             ))}
           </select>
+          </div>
         </header>
 
         {groups.map((group) => (
@@ -91,17 +103,29 @@ const styles: Record<string, React.CSSProperties> = {
   },
   h1: { fontSize: 48, fontWeight: 800, margin: 0, letterSpacing: -1 },
   headerSub: { fontSize: 14, color: "var(--text-secondary)", marginTop: 10, maxWidth: 560 },
-  dropdown: {
+  newButton: {
     background: "linear-gradient(135deg, var(--teal-500), var(--cyan-400))",
     color: "var(--navy-950)",
     border: "none",
     borderRadius: 8,
-    padding: "10px 14px",
+    padding: "10px 16px",
     fontWeight: 700,
     fontSize: 13,
     cursor: "pointer",
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+  },
+  dropdown: {
+    background: "var(--navy-900)",
+    color: "var(--text-primary)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "10px 14px",
+    fontWeight: 600,
+    fontSize: 13,
+    cursor: "pointer",
     flexShrink: 0,
-    maxWidth: 260,
+    maxWidth: 240,
   },
   groupTitle: {
     fontSize: 14,

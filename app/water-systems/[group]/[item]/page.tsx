@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import CapabilityDashboard from "../../../components/CapabilityDashboard";
 import { findCapability } from "../../../lib/waterSystems";
 import GisDesigner from "../../../components/GisDesigner";
+import AnalyticsPanel from "../../../components/AnalyticsPanel";
 
 export default function WaterSystemsDashboard({
   params,
@@ -12,6 +14,21 @@ export default function WaterSystemsDashboard({
   if (!found) return notFound();
   const { group, item } = found;
 
+  let content: React.ReactNode = undefined;
+  if (item.slug === "interactive-gis-map") {
+    content = <GisDesigner />;
+  } else if (group.slug === "operations-monitoring") {
+    content = (
+      <Suspense>
+        <AnalyticsPanel
+          pillar="water-systems"
+          group={group.slug}
+          item={item.slug}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <CapabilityDashboard
       hubTitle="Municipal Water Systems"
@@ -19,7 +36,7 @@ export default function WaterSystemsDashboard({
       group={group}
       item={item}
     >
-      {item.slug === "interactive-gis-map" ? <GisDesigner /> : undefined}
+      {content}
     </CapabilityDashboard>
   );
 }
