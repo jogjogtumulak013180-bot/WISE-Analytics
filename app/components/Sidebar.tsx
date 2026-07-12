@@ -7,6 +7,7 @@ import { TOTAL_CAPABILITY_COUNT } from "../lib/waterSystems";
 import { CONSTRUCTION_MANAGEMENT_TOTAL_COUNT } from "../lib/constructionManagement";
 import { DEV_PLANNING_TOTAL_COUNT } from "../lib/devPlanning";
 import { MUNICIPAL_INTEL_TOTAL_COUNT } from "../lib/municipalIntel";
+import { EVENT_ORGANIZING_TOTAL_COUNT } from "../lib/eventOrganizing";
 
 type View = "Overview" | ProjectCategory;
 
@@ -15,6 +16,7 @@ const PRODUCT_LINKS = [
   { href: "/dev-planning", label: "Dev Planning", icon: "\u{1F5FA}️", accent: "#34d399", count: DEV_PLANNING_TOTAL_COUNT },
   { href: "/municipal-intel", label: "Municipal Intel", icon: "\u{1F3DB}️", accent: "#a78bfa", count: MUNICIPAL_INTEL_TOTAL_COUNT },
   { href: "/water-systems", label: "Municipal Water Systems", icon: "\u{1F4A7}", accent: "#22d3ee", count: TOTAL_CAPABILITY_COUNT },
+  { href: "/event-organizing", label: "Event Organizing", icon: "\u{1F393}", accent: "#fb7185", count: EVENT_ORGANIZING_TOTAL_COUNT },
 ];
 
 interface SidebarProps {
