@@ -69,7 +69,17 @@ export default function CapabilityHub({ eyebrow, title, subtitle, groups, basePa
 
         {groups.map((group) => (
           <section key={group.slug} style={{ marginBottom: 28 }}>
-            <h2 style={styles.groupTitle}>{group.title}</h2>
+            <div style={styles.groupHeader}>
+              <h2 style={styles.groupTitle}>{group.title}</h2>
+              <Link
+                href={`/import/${
+                  PILLARS.find((p) => p.basePath === basePath)?.slug ?? ""
+                }/${group.slug}`}
+                style={styles.importButton}
+              >
+                ⬆ Import Data
+              </Link>
+            </div>
             <div style={styles.grid}>
               {group.items.map((item) => (
                 <a key={item.slug} href={`${basePath}/${group.slug}/${item.slug}`} style={styles.card}>
@@ -127,13 +137,31 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     maxWidth: 240,
   },
+  groupHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottom: "1px solid var(--border)",
+  },
   groupTitle: {
     fontSize: 14,
     fontWeight: 700,
     color: "var(--text-primary)",
-    marginBottom: 10,
-    paddingBottom: 8,
-    borderBottom: "1px solid var(--border)",
+    margin: 0,
+  },
+  importButton: {
+    color: "var(--teal-400)",
+    border: "1px solid var(--teal-500)",
+    borderRadius: 7,
+    padding: "5px 12px",
+    fontWeight: 700,
+    fontSize: 12,
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   grid: {
     display: "grid",

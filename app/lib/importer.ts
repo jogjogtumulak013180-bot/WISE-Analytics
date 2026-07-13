@@ -134,7 +134,7 @@ function cleanLongRow(
   ctx: CleanContext
 ): CleanedRecord {
   const clean: Record<string, unknown> = {};
-  const errors: CleanIssue[] = [];
+  let errors: CleanIssue[] = [];
   const repairs: RepairEntry[] = [];
 
   for (const col of sheetDef.columns) {
@@ -142,6 +142,24 @@ function cleanLongRow(
     if (res.error) errors.push(res.error);
     if (res.repair) repairs.push(res.repair);
     clean[col.key] = res.value;
+  }
+
+  // tier-2: recompute broken derived cells from the row's clean inputs
+  for (const col of sheetDef.columns) {
+    if (!col.derive) continue;
+    const err = errors.find((e) => e.col === col.key);
+    if (!err) continue;
+    const recomputed = col.derive(clean, ctx);
+    if (recomputed !== null && Number.isFinite(recomputed)) {
+      clean[col.key] = recomputed;
+      errors = errors.filter((e) => e.col !== col.key);
+      repairs.push({
+        col: col.key,
+        rule: "derived_recomputed",
+        old: String(raw[map[col.header]] ?? ""),
+        new: String(recomputed),
+      });
+    }
   }
 
   if (sheetDef.derive && errors.length === 0) {
@@ -259,6 +277,27 @@ function cleanWideRow(
 // Template workbook generation (download)
 // ---------------------------------------------------------------------------
 
+/** human-readable rule string for a column (shared by workbook + UI) */
+export function columnRules(c: {
+  type: string;
+  enumValues?: string[];
+  enumSource?: string;
+  min?: number;
+  max?: number;
+  derive?: unknown;
+}): string {
+  const parts: string[] = [];
+  if (c.enumValues) parts.push(`one of: ${c.enumValues.join(", ")}`);
+  if (c.enumSource) parts.push(`must match the project's declared ${c.enumSource} (case-insensitive)`);
+  if (c.min !== undefined && c.max !== undefined) parts.push(`${c.min} to ${c.max}`);
+  else if (c.min !== undefined) parts.push(`>= ${c.min}`);
+  else if (c.max !== undefined) parts.push(`<= ${c.max}`);
+  if (c.type === "date") parts.push("accepts 2025-01-15, 15/01/2025, Jan, 2025-01");
+  if (c.type === "number") parts.push("commas/₱/% accepted and normalized");
+  if (c.derive) parts.push("auto-recomputed if broken (#REF!)");
+  return parts.join("; ");
+}
+
 export function generateTemplateWorkbook(template: TemplateDef): Buffer {
   const wb = XLSX.utils.book_new();
 
@@ -282,6 +321,36 @@ export function generateTemplateWorkbook(template: TemplateDef): Buffer {
   const wsReadme = XLSX.utils.aoa_to_sheet(readme);
   wsReadme["!cols"] = [{ wch: 110 }];
   XLSX.utils.book_append_sheet(wb, wsReadme, "README");
+
+  // Requirements sheet: column + data-type contract, one row per column
+  const reqRows: (string | number)[][] = [
+    ["SHEET", "COLUMN", "DATA TYPE", "REQUIRED", "ALLOWED VALUES / RULES", "NOTES"],
+  ];
+  for (const s of template.sheets) {
+    for (const c of s.columns) {
+      reqRows.push([
+        s.name,
+        c.header,
+        c.type,
+        c.required ? "YES" : "no",
+        columnRules(c),
+        c.note ?? "",
+      ]);
+    }
+    if (s.layout === "wide-months") {
+      reqRows.push([
+        s.name,
+        "JAN … DEC (12 columns)",
+        "number",
+        "no",
+        s.valueMin !== undefined ? `>= ${s.valueMin}; blank = not yet reported` : "blank = not yet reported",
+        `each month value becomes one ${s.valueKey ?? "value"} record`,
+      ]);
+    }
+  }
+  const wsReq = XLSX.utils.aoa_to_sheet(reqRows);
+  wsReq["!cols"] = [{ wch: 18 }, { wch: 26 }, { wch: 10 }, { wch: 9 }, { wch: 48 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, wsReq, "Requirements");
 
   for (const sheetDef of template.sheets) {
     const headers = headersOf(sheetDef);

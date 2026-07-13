@@ -20,6 +20,14 @@ export interface ColumnDef {
   enumValues?: string[];
   min?: number;
   max?: number;
+  /**
+   * Tier-2 repair: when this cell is broken (#REF!, blank, non-numeric) but the
+   * row's other cells are clean, recompute it from them. Return null when the
+   * inputs needed are themselves missing (cell stays broken → quarantine).
+   */
+  derive?: (row: Record<string, unknown>, ctx: CleanContext) => number | null;
+  /** short human note shown in the requirements table */
+  note?: string;
 }
 
 export interface SheetDef {
@@ -203,6 +211,18 @@ export function normalizeEnum(
 export interface CleanContext {
   /** wa_projects.general_info — canonical enum lists, reporting_year, etc. */
   generalInfo: Record<string, unknown>;
+}
+
+/** helper for derive() rules: numeric value of a cleaned cell, or null */
+export function num(row: Record<string, unknown>, key: string): number | null {
+  const v = row[key];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+/** helper for derive() rules: rate from general_info with a default */
+export function rate(ctx: CleanContext, key: string, fallback: number): number {
+  const v = Number(ctx.generalInfo[key]);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
 }
 
 function enumList(col: ColumnDef, ctx: CleanContext): string[] | null {

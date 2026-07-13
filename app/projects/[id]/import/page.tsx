@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
+import RequirementsTable from "../../../components/RequirementsTable";
 import { supabase } from "../../../lib/supabase";
 import { findPillar } from "../../../lib/pillars";
 import { templateForSubPillar } from "../../../lib/templates";
@@ -115,6 +116,14 @@ export default function ImportPage({ params }: { params: { id: string } }) {
               <a href={`/api/templates/${template.code}`} style={styles.buttonGhost}>
                 ⬇ Download {template.fileName}
               </a>
+              <details style={styles.details}>
+                <summary style={styles.summary}>
+                  View column &amp; data type requirements
+                </summary>
+                <div style={{ marginTop: 12 }}>
+                  <RequirementsTable template={template} />
+                </div>
+              </details>
             </section>
 
             <section style={styles.card}>
@@ -296,4 +305,11 @@ const styles: Record<string, React.CSSProperties> = {
   kpi: { minWidth: 90 },
   subhead: { fontSize: 12, fontWeight: 800, letterSpacing: 0.5, margin: "12px 0 6px" },
   list: { margin: "4px 0", paddingLeft: 18, fontSize: 12.5, lineHeight: 1.7, color: "var(--text-secondary)" },
+  details: { marginTop: 14 },
+  summary: {
+    cursor: "pointer",
+    fontSize: 12.5,
+    fontWeight: 700,
+    color: "var(--teal-400)",
+  },
 };

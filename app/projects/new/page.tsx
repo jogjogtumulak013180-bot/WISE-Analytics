@@ -12,7 +12,7 @@ function NewProjectForm() {
   const search = useSearchParams();
 
   const [pillarSlug, setPillarSlug] = useState(search.get("pillar") ?? "");
-  const [subPillar, setSubPillar] = useState("");
+  const [subPillar, setSubPillar] = useState(search.get("group") ?? "");
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [client, setClient] = useState("");
