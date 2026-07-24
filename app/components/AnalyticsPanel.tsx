@@ -22,10 +22,20 @@ export default function AnalyticsPanel({
   pillar,
   group,
   item,
+  matchSubPillar = true,
+  renderExtra,
 }: {
   pillar: string;
   group: string;
   item: string;
+  /** false when every sub-pillar of this pillar shares one project_id's data
+   *  (Construction: Project Delivery + Schedule & Cost Control both write into
+   *  the same project's core_pm tables) — show all of the pillar's projects,
+   *  not just ones created under this exact sub_pillar. */
+  matchSubPillar?: boolean;
+  /** optional block rendered under the project toolbar, above the KPIs —
+   *  gets the currently-selected project id and a refresh callback. */
+  renderExtra?: (ctx: { projectId: string; refresh: () => void }) => React.ReactNode;
 }) {
   const search = useSearchParams();
   const [projects, setProjects] = useState<ProjectOpt[]>([]);
@@ -34,18 +44,17 @@ export default function AnalyticsPanel({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("wa_projects")
-      .select("id, name")
-      .eq("pillar", pillar)
-      .eq("sub_pillar", group)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        const opts = (data as ProjectOpt[]) ?? [];
-        setProjects(opts);
-        setProjectId((prev) => prev || opts[0]?.id || "");
-      });
-  }, [pillar, group]);
+    let q = supabase.from("wa_projects").select("id, name").eq("pillar", pillar);
+    if (matchSubPillar) q = q.eq("sub_pillar", group);
+    q.order("created_at", { ascending: false }).then(({ data }) => {
+      const opts = (data as ProjectOpt[]) ?? [];
+      setProjects(opts);
+      setProjectId((prev) => prev || opts[0]?.id || "");
+    });
+  }, [pillar, group, matchSubPillar]);
+
+  const [refreshTick, setRefreshTick] = useState(0);
+  const refresh = () => setRefreshTick((n) => n + 1);
 
   useEffect(() => {
     if (!projectId) return;
@@ -57,7 +66,7 @@ export default function AnalyticsPanel({
       .then((j) => setPayload(j as Payload))
       .catch((e) => setPayload({ kpis: [], error: String(e) }))
       .finally(() => setLoading(false));
-  }, [pillar, group, item, projectId]);
+  }, [pillar, group, item, projectId, refreshTick]);
 
   if (projects.length === 0) {
     return (
@@ -97,6 +106,8 @@ export default function AnalyticsPanel({
           </Link>
         )}
       </div>
+
+      {projectId && renderExtra && renderExtra({ projectId, refresh })}
 
       {loading && <div style={styles.note}>Computing…</div>}
 

@@ -51,3 +51,9 @@ export const TEMPLATES: Record<string, TemplateDef> = Object.fromEntries(
 export function templateForSubPillar(pillar: string, subPillar: string): TemplateDef | null {
   return ALL.find((t) => t.pillar === pillar && t.subPillar === subPillar) ?? null;
 }
+
+/** all templates for a pillar (e.g. Construction has two: Delivery + Schedule/Cost
+ *  Control, both importable against the same project). */
+export function templatesForPillar(pillar: string): TemplateDef[] {
+  return ALL.filter((t) => t.pillar === pillar);
+}

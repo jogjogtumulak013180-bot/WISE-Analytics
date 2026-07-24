@@ -6,7 +6,8 @@ import Sidebar from "../../../components/Sidebar";
 import RequirementsTable from "../../../components/RequirementsTable";
 import { supabase } from "../../../lib/supabase";
 import { findPillar } from "../../../lib/pillars";
-import { templateForSubPillar } from "../../../lib/templates";
+import { templatesForPillar } from "../../../lib/templates";
+import type { TemplateDef } from "../../../lib/templates/types";
 
 interface ProjectRow {
   id: string;
@@ -34,9 +35,6 @@ interface UploadOutcome {
 
 export default function ImportPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<ProjectRow | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [outcome, setOutcome] = useState<UploadOutcome | null>(null);
 
   useEffect(() => {
     supabase
@@ -51,21 +49,68 @@ export default function ImportPage({ params }: { params: { id: string } }) {
     () => (project?.pillar ? findPillar(project.pillar) : null),
     [project]
   );
-  const template = useMemo(
-    () =>
-      project?.pillar && project.sub_pillar
-        ? templateForSubPillar(project.pillar, project.sub_pillar)
-        : null,
+
+  // Most pillars have exactly one template per sub_pillar; Construction has two
+  // (Project Delivery + Schedule & Cost Control) that both populate the same
+  // project's core_pm data, so every template for the pillar is offered here.
+  const templates = useMemo(
+    () => (project?.pillar ? templatesForPillar(project.pillar) : []),
     [project]
   );
-  const group = pillar?.groups.find((g) => g.slug === project?.sub_pillar) ?? null;
+
+  if (!project) {
+    return (
+      <div style={styles.shell}>
+        <Sidebar variant="secondary" />
+        <main style={styles.main}>Loading…</main>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.shell}>
+      <Sidebar variant="secondary" />
+      <main style={styles.main}>
+        <div style={styles.eyebrow}>{pillar?.title ?? project.pillar}</div>
+        <h1 style={styles.h1}>{project.name}</h1>
+        <div style={styles.sub}>{project.location}</div>
+
+        {templates.length === 0 ? (
+          <section style={styles.card}>
+            No data template is available for this pillar yet. The project has
+            been created; its import pipeline arrives in a later phase.
+          </section>
+        ) : (
+          templates.map((t) => (
+            <TemplateUploadBlock key={t.code} template={t} projectId={project.id} pillar={pillar} />
+          ))
+        )}
+      </main>
+    </div>
+  );
+}
+
+function TemplateUploadBlock({
+  template,
+  projectId,
+  pillar,
+}: {
+  template: TemplateDef;
+  projectId: string;
+  pillar: ReturnType<typeof findPillar>;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [outcome, setOutcome] = useState<UploadOutcome | null>(null);
+  const group = pillar?.groups.find((g) => g.slug === template.subPillar) ?? null;
 
   async function handleUpload() {
-    if (!file || !project) return;
+    if (!file) return;
     setBusy(true);
     setOutcome(null);
     const fd = new FormData();
-    fd.append("projectId", project.id);
+    fd.append("projectId", projectId);
+    fd.append("templateCode", template.code);
     fd.append("file", file);
     try {
       const res = await fetch("/api/datasets", { method: "POST", body: fd });
@@ -77,176 +122,141 @@ export default function ImportPage({ params }: { params: { id: string } }) {
     setBusy(false);
   }
 
-  if (!project) {
-    return (
-      <div style={styles.shell}>
-        <Sidebar variant="secondary" />
-        <main style={styles.main}>Loading…</main>
-      </div>
-    );
-  }
-
   const ok = outcome?.status === "promoted";
   const warn = outcome?.status === "promoted_with_warnings";
   const rejected = outcome?.status === "rejected";
 
   return (
-    <div style={styles.shell}>
-      <Sidebar variant="secondary" />
-      <main style={styles.main}>
-        <div style={styles.eyebrow}>
-          {pillar?.title ?? project.pillar} / {group?.title ?? project.sub_pillar}
+    <section style={{ marginBottom: 30 }}>
+      <div style={styles.blockTitle}>
+        {group?.title ?? template.subPillar} <span style={styles.blockSub}>— {template.title}</span>
+      </div>
+
+      <section style={styles.card}>
+        <div style={styles.step}>STEP 1 — Download the data template</div>
+        <p style={styles.p}>
+          One workbook populates every dashboard under {group?.title ?? template.subPillar}. Fill it
+          in without renaming sheets or headers, then upload it below.
+        </p>
+        <a href={`/api/templates/${template.code}`} style={styles.buttonGhost}>
+          ⬇ Download {template.fileName}
+        </a>
+        <details style={styles.details}>
+          <summary style={styles.summary}>View column &amp; data type requirements</summary>
+          <div style={{ marginTop: 12 }}>
+            <RequirementsTable template={template} />
+          </div>
+        </details>
+      </section>
+
+      <section style={styles.card}>
+        <div style={styles.step}>STEP 2 — Upload the filled-in workbook</div>
+        <p style={styles.p}>
+          Validation, cleaning, and promotion run automatically: minor issues
+          (formats, capitalization, N/A) are fixed and logged; rows that cannot
+          be cleaned are quarantined for your review while the rest import.
+        </p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            style={{ fontSize: 13 }}
+          />
+          <button
+            onClick={handleUpload}
+            disabled={!file || busy}
+            style={{ ...styles.button, opacity: !file || busy ? 0.6 : 1 }}
+          >
+            {busy ? "Processing…" : "Upload & Import"}
+          </button>
         </div>
-        <h1 style={styles.h1}>{project.name}</h1>
-        <div style={styles.sub}>{project.location}</div>
+      </section>
 
-        {!template ? (
-          <section style={styles.card}>
-            No data template is available for this sub-pillar yet. The project has
-            been created; its import pipeline arrives in a later phase.
-          </section>
-        ) : (
-          <>
-            <section style={styles.card}>
-              <div style={styles.step}>STEP 1 — Download the data template</div>
-              <p style={styles.p}>
-                One workbook populates every dashboard under {group?.title}. Fill it
-                in without renaming sheets or headers, then upload it below.
-              </p>
-              <a href={`/api/templates/${template.code}`} style={styles.buttonGhost}>
-                ⬇ Download {template.fileName}
-              </a>
-              <details style={styles.details}>
-                <summary style={styles.summary}>
-                  View column &amp; data type requirements
-                </summary>
-                <div style={{ marginTop: 12 }}>
-                  <RequirementsTable template={template} />
-                </div>
-              </details>
-            </section>
+      {outcome && (
+        <section
+          style={{
+            ...styles.card,
+            borderColor: ok
+              ? "rgba(60,200,140,.5)"
+              : warn
+              ? "rgba(230,180,60,.5)"
+              : "rgba(220,60,60,.5)",
+          }}
+        >
+          <div style={styles.step}>
+            {ok && "✅ IMPORTED — all rows promoted to core"}
+            {warn && "⚠️ IMPORTED WITH WARNINGS — some rows need your review"}
+            {rejected && "❌ REJECTED — the workbook structure doesn't match the template"}
+            {outcome.status === "error" && `❌ ERROR — ${outcome.error}`}
+          </div>
 
-            <section style={styles.card}>
-              <div style={styles.step}>STEP 2 — Upload the filled-in workbook</div>
-              <p style={styles.p}>
-                Validation, cleaning, and promotion run automatically: minor issues
-                (formats, capitalization, N/A) are fixed and logged; rows that cannot
-                be cleaned are quarantined for your review while the rest import.
-              </p>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  style={{ fontSize: 13 }}
-                />
-                <button
-                  onClick={handleUpload}
-                  disabled={!file || busy}
-                  style={{ ...styles.button, opacity: !file || busy ? 0.6 : 1 }}
-                >
-                  {busy ? "Processing…" : "Upload & Import"}
-                </button>
-              </div>
-            </section>
+          {outcome.summary && (
+            <div style={styles.kpiRow}>
+              <Kpi label="Rows read" value={outcome.summary.totalRows} />
+              <Kpi label="Promoted" value={outcome.summary.validRows} />
+              <Kpi label="Auto-repaired" value={outcome.summary.repairedRows} />
+              <Kpi label="Quarantined" value={outcome.summary.quarantinedRows} />
+            </div>
+          )}
 
-            {outcome && (
-              <section
-                style={{
-                  ...styles.card,
-                  borderColor: ok
-                    ? "rgba(60,200,140,.5)"
-                    : warn
-                    ? "rgba(230,180,60,.5)"
-                    : "rgba(220,60,60,.5)",
-                }}
+          {rejected && outcome.structuralErrors && (
+            <ul style={styles.list}>
+              {outcome.structuralErrors.map((e, i) => (
+                <li key={i}>
+                  <strong>{e.sheet}:</strong> {e.message}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {warn && outcome.quarantined && outcome.quarantined.length > 0 && (
+            <>
+              <div style={styles.subhead}>Needs your review (kept in staging, not deleted):</div>
+              <ul style={styles.list}>
+                {outcome.quarantined.slice(0, 25).map((q, i) => (
+                  <li key={i}>
+                    <strong>
+                      {q.sheet} row {q.rowNum}:
+                    </strong>{" "}
+                    {q.errors.map((e) => `${e.col} — ${e.message}`).join("; ")}
+                  </li>
+                ))}
+                {outcome.quarantined.length > 25 && <li>…and {outcome.quarantined.length - 25} more.</li>}
+              </ul>
+            </>
+          )}
+
+          {(ok || warn) && outcome.repairsAudit && outcome.repairsAudit.length > 0 && (
+            <>
+              <div style={styles.subhead}>Auto-repairs (audit trail):</div>
+              <ul style={styles.list}>
+                {outcome.repairsAudit.slice(0, 25).map((r, i) => (
+                  <li key={i}>
+                    <strong>
+                      {r.sheet} row {r.rowNum}:
+                    </strong>{" "}
+                    {r.repairs.map((x) => `${x.col}: "${x.old}" → "${x.new}" (${x.rule})`).join("; ")}
+                  </li>
+                ))}
+                {outcome.repairsAudit.length > 25 && <li>…and {outcome.repairsAudit.length - 25} more.</li>}
+              </ul>
+            </>
+          )}
+
+          {(ok || warn) && pillar && group && (
+            <div style={{ marginTop: 16 }}>
+              <Link
+                href={`${pillar.basePath}/${group.slug}/${group.items[0]?.slug ?? ""}?project=${projectId}`}
+                style={styles.button}
               >
-                <div style={styles.step}>
-                  {ok && "✅ IMPORTED — all rows promoted to core"}
-                  {warn && "⚠️ IMPORTED WITH WARNINGS — some rows need your review"}
-                  {rejected && "❌ REJECTED — the workbook structure doesn't match the template"}
-                  {outcome.status === "error" && `❌ ERROR — ${outcome.error}`}
-                </div>
-
-                {outcome.summary && (
-                  <div style={styles.kpiRow}>
-                    <Kpi label="Rows read" value={outcome.summary.totalRows} />
-                    <Kpi label="Promoted" value={outcome.summary.validRows} />
-                    <Kpi label="Auto-repaired" value={outcome.summary.repairedRows} />
-                    <Kpi label="Quarantined" value={outcome.summary.quarantinedRows} />
-                  </div>
-                )}
-
-                {rejected && outcome.structuralErrors && (
-                  <ul style={styles.list}>
-                    {outcome.structuralErrors.map((e, i) => (
-                      <li key={i}>
-                        <strong>{e.sheet}:</strong> {e.message}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {warn && outcome.quarantined && outcome.quarantined.length > 0 && (
-                  <>
-                    <div style={styles.subhead}>
-                      Needs your review (kept in staging, not deleted):
-                    </div>
-                    <ul style={styles.list}>
-                      {outcome.quarantined.slice(0, 25).map((q, i) => (
-                        <li key={i}>
-                          <strong>
-                            {q.sheet} row {q.rowNum}:
-                          </strong>{" "}
-                          {q.errors.map((e) => `${e.col} — ${e.message}`).join("; ")}
-                        </li>
-                      ))}
-                      {outcome.quarantined.length > 25 && (
-                        <li>…and {outcome.quarantined.length - 25} more.</li>
-                      )}
-                    </ul>
-                  </>
-                )}
-
-                {(ok || warn) &&
-                  outcome.repairsAudit &&
-                  outcome.repairsAudit.length > 0 && (
-                    <>
-                      <div style={styles.subhead}>Auto-repairs (audit trail):</div>
-                      <ul style={styles.list}>
-                        {outcome.repairsAudit.slice(0, 25).map((r, i) => (
-                          <li key={i}>
-                            <strong>
-                              {r.sheet} row {r.rowNum}:
-                            </strong>{" "}
-                            {r.repairs
-                              .map((x) => `${x.col}: "${x.old}" → "${x.new}" (${x.rule})`)
-                              .join("; ")}
-                          </li>
-                        ))}
-                        {outcome.repairsAudit.length > 25 && (
-                          <li>…and {outcome.repairsAudit.length - 25} more.</li>
-                        )}
-                      </ul>
-                    </>
-                  )}
-
-                {(ok || warn) && pillar && group && (
-                  <div style={{ marginTop: 16 }}>
-                    <Link
-                      href={`${pillar.basePath}/${group.slug}/${group.items[0]?.slug ?? ""}?project=${project.id}`}
-                      style={styles.button}
-                    >
-                      Open the dashboards →
-                    </Link>
-                  </div>
-                )}
-              </section>
-            )}
-          </>
-        )}
-      </main>
-    </div>
+                Open the dashboards →
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
+    </section>
   );
 }
 
@@ -267,6 +277,8 @@ const styles: Record<string, React.CSSProperties> = {
   eyebrow: { fontSize: 12, fontWeight: 700, letterSpacing: 1, color: "var(--text-muted)", marginBottom: 10 },
   h1: { fontSize: 36, fontWeight: 800, margin: 0, letterSpacing: -0.5 },
   sub: { fontSize: 13, color: "var(--text-secondary)", margin: "6px 0 26px" },
+  blockTitle: { fontSize: 15, fontWeight: 800, margin: "18px 0 10px" },
+  blockSub: { fontSize: 12, fontWeight: 600, color: "var(--text-muted)" },
   card: {
     background: "var(--navy-900)",
     border: "1px solid var(--border)",

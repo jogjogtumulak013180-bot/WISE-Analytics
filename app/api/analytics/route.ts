@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { computeWaterOps } from "../../lib/analytics/waterOps";
+import { computeConstruction } from "../../lib/analytics/construction";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,11 @@ export async function GET(req: NextRequest) {
 
   if (pillar === "water-systems" && group === "operations-monitoring") {
     const payload = await computeWaterOps(item, project);
+    return NextResponse.json(payload);
+  }
+
+  if (pillar === "construction") {
+    const payload = await computeConstruction(item, project);
     return NextResponse.json(payload);
   }
 
